@@ -31,11 +31,22 @@ type Config struct {
 }
 
 type Document struct {
-	FileType    string      `json:"fileType"`
-	Key         string      `json:"key"`
-	Title       string      `json:"title"`
-	URL         string      `json:"url"`
-	Permissions Permissions `json:"permissions"`
+	FileType    string        `json:"fileType"`
+	Key         string        `json:"key"`
+	Title       string        `json:"title"`
+	URL         string        `json:"url"`
+	Permissions Permissions   `json:"permissions"`
+	Info        *DocumentInfo `json:"info,omitempty"`
+}
+
+type DocumentInfo struct {
+	SharingSettings []SharingSetting `json:"sharingSettings,omitempty"`
+}
+
+type SharingSetting struct {
+	Permissions string `json:"permissions"`
+	User        string `json:"user,omitempty"`
+	IsLink      bool   `json:"isLink,omitempty"`
 }
 
 type EditorConfig struct {

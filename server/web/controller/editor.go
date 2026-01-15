@@ -48,6 +48,23 @@ func (c *editorParameters) Validate() error {
 	return validator.New().Struct(c)
 }
 
+// convertPermissionsToSharingString converts Permissions to OnlyOffice sharing format string
+func convertPermissionsToSharingString(perms oomodel.Permissions) string {
+	if perms.Edit {
+		return "Full Access"
+	}
+	if perms.Review {
+		return "Review"
+	}
+	if perms.Comment {
+		return "Comment"
+	}
+	if perms.FillForms {
+		return "Form Filling"
+	}
+	return "Read Only"
+}
+
 type EditorHandler struct {
 	api            plugin.API
 	configuration  *configuration.Configuration
@@ -161,6 +178,41 @@ func (h *EditorHandler) Handle(rw http.ResponseWriter, r *http.Request) {
 		theme = "theme-dark"
 	}
 
+	// Build sharing settings if user is the file author
+	var documentInfo *oomodel.DocumentInfo
+	if payload.UserID == post.UserId {
+		// Get all users with permissions for this file
+		userPermissions := h.fileHelper.GetPostPermissionsByFileID(payload.FileID, post, h.api.GetUser)
+		sharingSettings := make([]oomodel.SharingSetting, 0, len(userPermissions)+1)
+
+		// Add author with Full Access
+		authorUser, authorErr := h.api.GetUser(post.UserId)
+		if authorErr == nil {
+			sharingSettings = append(sharingSettings, oomodel.SharingSetting{
+				User:        authorUser.Username,
+				Permissions: "Full Access",
+			})
+		}
+
+		// Add other users with their permissions
+		for _, userPerm := range userPermissions {
+			// Skip author as we already added them
+			if userPerm.ID == post.UserId {
+				continue
+			}
+			sharingSettings = append(sharingSettings, oomodel.SharingSetting{
+				User:        userPerm.Username,
+				Permissions: convertPermissionsToSharingString(userPerm.Permissions),
+			})
+		}
+
+		if len(sharingSettings) > 0 {
+			documentInfo = &oomodel.DocumentInfo{
+				SharingSettings: sharingSettings,
+			}
+		}
+	}
+
 	config := oomodel.Config{
 		Document: oomodel.Document{
 			FileType:    fileInfo.Extension,
@@ -168,6 +220,7 @@ func (h *EditorHandler) Handle(rw http.ResponseWriter, r *http.Request) {
 			Title:       fileInfo.Name,
 			URL:         fmt.Sprintf("%s/download?id=%s", serverURL, fileInfo.Id),
 			Permissions: permissions,
+			Info:        documentInfo,
 		},
 		DocumentType: docType,
 		EditorConfig: oomodel.EditorConfig{

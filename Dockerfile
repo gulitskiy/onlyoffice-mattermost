@@ -56,6 +56,7 @@ WORKDIR /onlyoffice-mattermost
 # Clone repo
 # --------------------
 RUN git clone https://github.com/gulitskiy/onlyoffice-mattermost.git .
+RUN git submodule update --init --recursive
 
 # --------------------
 # Build

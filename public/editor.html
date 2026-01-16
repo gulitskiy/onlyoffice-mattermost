@@ -189,26 +189,50 @@
         console.log("[ONLYOFFICE] Customization features:", config.editorConfig && config.editorConfig.customization ? config.editorConfig.customization.features : "no features");
         console.log("[ONLYOFFICE] Document permissions:", config.document ? config.document.permissions : "no permissions");
         
-        // Flag to prevent infinite recursion when setting sharing settings
-        var isSettingSharingSettings = false;
+        // Counter to prevent infinite recursion when setting sharing settings
+        var sharingSettingsCallCount = 0;
+        var sharingSettingsCallTimeout = null;
         
         // Add onRequestSharingSettings handler after config is defined
         // This handler is required for the sharing button to appear in the editor
-        // According to ONLYOFFICE API documentation, we need to call setSharingSettings inside this handler
+        // According to ONLYOFFICE API documentation, we should return the sharing settings object
+        // The editor will automatically open the dialog when it receives the settings
+        // IMPORTANT: Do NOT call showSharingSettings() here - it causes infinite recursion
         events["onRequestSharingSettings"] = function () {
-            console.log("[ONLYOFFICE] onRequestSharingSettings called");
-            console.log("[ONLYOFFICE] isSettingSharingSettings flag:", isSettingSharingSettings);
+            sharingSettingsCallCount++;
+            console.log("[ONLYOFFICE] onRequestSharingSettings called (count:", sharingSettingsCallCount + ")");
             console.log("[ONLYOFFICE] docEditor exists:", !!docEditor);
             console.log("[ONLYOFFICE] config exists:", !!config);
             console.log("[ONLYOFFICE] document exists:", !!(config && config.document));
             console.log("[ONLYOFFICE] document.info exists:", !!(config && config.document && config.document.info));
             
-            // Prevent infinite recursion
-            if (isSettingSharingSettings) {
-                console.warn("[ONLYOFFICE] Already setting sharing settings, skipping to prevent recursion");
-                return {
-                    sharingSettings: []
-                };
+            // Prevent infinite recursion - if called more than once in quick succession, return cached settings
+            if (sharingSettingsCallCount > 1) {
+                console.warn("[ONLYOFFICE] Multiple calls detected, preventing recursion by returning cached settings");
+                // Reset counter after a delay
+                if (sharingSettingsCallTimeout) {
+                    clearTimeout(sharingSettingsCallTimeout);
+                }
+                sharingSettingsCallTimeout = setTimeout(function() {
+                    sharingSettingsCallCount = 0;
+                    console.log("[ONLYOFFICE] Reset sharingSettingsCallCount");
+                }, 1000);
+                
+                // Return the same settings to prevent recursion
+                if (config && config.document && config.document.info) {
+                    var cachedSettings = [];
+                    if (config.document.info.sharingSettings && Array.isArray(config.document.info.sharingSettings)) {
+                        cachedSettings = config.document.info.sharingSettings;
+                    }
+                    var cachedReturnObj = {
+                        sharingSettings: cachedSettings
+                    };
+                    if (config.document.info.owner) {
+                        cachedReturnObj.owner = config.document.info.owner;
+                    }
+                    return cachedReturnObj;
+                }
+                return { sharingSettings: [] };
             }
             
             // Get sharing settings from document config
@@ -239,71 +263,19 @@
                 }
                 
                 console.log("[ONLYOFFICE] Returning sharing settings object:", JSON.stringify(returnObj, null, 2));
+                console.log("[ONLYOFFICE] Editor will automatically open sharing dialog with these settings");
                 
-                // According to ONLYOFFICE API, we need to call setSharingSettings inside this handler
-                // Then explicitly call showSharingSettings to open the dialog
-                // Use a flag to prevent infinite recursion
-                if (docEditor && typeof docEditor.setSharingSettings === 'function') {
-                    console.log("[ONLYOFFICE] Calling setSharingSettings inside onRequestSharingSettings");
-                    isSettingSharingSettings = true;
-                    try {
-                        docEditor.setSharingSettings(returnObj);
-                        console.log("[ONLYOFFICE] setSharingSettings called successfully");
-                        
-                        // Explicitly open the sharing dialog after setting the settings
-                        // Use a delay to ensure setSharingSettings has processed
-                        // In nested iframe structure (Mattermost -> plugin -> ONLYOFFICE), 
-                        // we need more time for the editor to process the settings
-                        if (docEditor && typeof docEditor.showSharingSettings === 'function') {
-                            setTimeout(function() {
-                                console.log("[ONLYOFFICE] Calling showSharingSettings to open dialog");
-                                console.log("[ONLYOFFICE] Current window location:", window.location.href);
-                                console.log("[ONLYOFFICE] Is in iframe:", window.parent !== window);
-                                try {
-                                    var result = docEditor.showSharingSettings();
-                                    console.log("[ONLYOFFICE] showSharingSettings result:", result);
-                                    console.log("[ONLYOFFICE] showSharingSettings called successfully");
-                                    
-                                    // Check if dialog elements appear in the ONLYOFFICE iframe after a delay
-                                    // Note: Dialog is rendered inside ONLYOFFICE iframe, not in our iframe
-                                    setTimeout(function() {
-                                        console.log("[ONLYOFFICE] Checking for dialog in ONLYOFFICE iframe (if accessible)");
-                                        // Try to access the ONLYOFFICE iframe if it's in the same origin
-                                        try {
-                                            var onlyofficeIframe = document.getElementById('iframeEditor');
-                                            if (onlyofficeIframe && onlyofficeIframe.contentDocument) {
-                                                var dialogs = onlyofficeIframe.contentDocument.querySelectorAll('[class*="dialog"], [id*="dialog"], [class*="modal"], [id*="modal"], [class*="sharing"], [id*="sharing"]');
-                                                console.log("[ONLYOFFICE] Found dialog elements in ONLYOFFICE iframe:", dialogs.length);
-                                            } else {
-                                                console.log("[ONLYOFFICE] Cannot access ONLYOFFICE iframe content (cross-origin or not loaded)");
-                                            }
-                                        } catch (e) {
-                                            console.log("[ONLYOFFICE] Cannot access ONLYOFFICE iframe:", e.message);
-                                            console.log("[ONLYOFFICE] This is normal - dialog is rendered inside ONLYOFFICE iframe");
-                                        }
-                                    }, 500);
-                                } catch (showError) {
-                                    console.error("[ONLYOFFICE] Error in showSharingSettings:", showError);
-                                    console.error("[ONLYOFFICE] Error details:", showError.name, showError.message, showError.stack);
-                                }
-                            }, 200); // Increased delay for nested iframe structure
-                        } else {
-                            console.warn("[ONLYOFFICE] showSharingSettings method not available");
-                        }
-                    } catch (error) {
-                        console.error("[ONLYOFFICE] Error in setSharingSettings:", error);
-                    } finally {
-                        // Reset flag after a delay to allow the editor to process
-                        setTimeout(function() {
-                            isSettingSharingSettings = false;
-                            console.log("[ONLYOFFICE] Reset isSettingSharingSettings flag");
-                        }, 200);
-                    }
-                } else {
-                    console.warn("[ONLYOFFICE] setSharingSettings method not available");
+                // Reset counter after a delay
+                if (sharingSettingsCallTimeout) {
+                    clearTimeout(sharingSettingsCallTimeout);
                 }
+                sharingSettingsCallTimeout = setTimeout(function() {
+                    sharingSettingsCallCount = 0;
+                    console.log("[ONLYOFFICE] Reset sharingSettingsCallCount");
+                }, 1000);
                 
                 // Return the settings object - ONLYOFFICE editor will use this to open the dialog
+                // Do NOT call showSharingSettings() here - it causes infinite recursion
                 return returnObj;
             } else {
                 console.warn("[ONLYOFFICE] Cannot return sharing settings - missing required objects");
@@ -347,47 +319,6 @@
                 console.log("[ONLYOFFICE] DocEditor created successfully:", !!docEditor);
                 console.log("[ONLYOFFICE] DocEditor methods:", docEditor ? Object.keys(docEditor).filter(k => typeof docEditor[k] === 'function') : "no methods");
                 fixSize();
-                
-                // Ensure sharing settings are set after editor is initialized
-                // This pre-initializes sharing settings so they're available when user clicks Share button
-                if (config && config.document && config.document.info && config.document.info.sharingSettings) {
-                    console.log("[ONLYOFFICE] Setting up initial sharing settings");
-                    setTimeout(function() {
-                        console.log("[ONLYOFFICE] Initial sharing settings timeout executed");
-                        if (docEditor && !isSettingSharingSettings) {
-                            console.log("[ONLYOFFICE] docEditor exists for initial setup:", !!docEditor);
-                            console.log("[ONLYOFFICE] setSharingSettings exists:", typeof docEditor.setSharingSettings === 'function');
-                            if (docEditor.setSharingSettings) {
-                                try {
-                                    var initialSettings = {
-                                        sharingSettings: config.document.info.sharingSettings
-                                    };
-                                    // Add owner if available
-                                    if (config.document.info.owner) {
-                                        initialSettings.owner = config.document.info.owner;
-                                        console.log("[ONLYOFFICE] Adding owner to initial settings:", config.document.info.owner);
-                                    }
-                                    isSettingSharingSettings = true;
-                                    docEditor.setSharingSettings(initialSettings);
-                                    console.log("[ONLYOFFICE] Initial setSharingSettings called successfully");
-                                    // Reset flag after a delay
-                                    setTimeout(function() {
-                                        isSettingSharingSettings = false;
-                                    }, 100);
-                                } catch (error) {
-                                    console.error("[ONLYOFFICE] Error in initial setSharingSettings:", error);
-                                    isSettingSharingSettings = false;
-                                }
-                            } else {
-                                console.warn("[ONLYOFFICE] setSharingSettings not available for initial setup");
-                            }
-                        } else {
-                            console.log("[ONLYOFFICE] Skipping initial setup - docEditor not ready or already setting");
-                        }
-                    }, 1000);
-                } else {
-                    console.log("[ONLYOFFICE] No sharing settings in config for initial setup");
-                }
             } catch (error) {
                 console.error("[ONLYOFFICE] Error creating DocEditor:", error);
                 innerAlert('[ONLYOFFICE Error]: could not initialize DocsAPI instance: ' + error.message);

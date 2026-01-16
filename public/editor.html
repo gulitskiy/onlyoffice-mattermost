@@ -263,7 +263,28 @@
                 }
                 
                 console.log("[ONLYOFFICE] Returning sharing settings object:", JSON.stringify(returnObj, null, 2));
-                console.log("[ONLYOFFICE] Editor will automatically open sharing dialog with these settings");
+                
+                // According to ONLYOFFICE API documentation, we MUST call setSharingSettings inside onRequestSharingSettings
+                // This is required for the dialog to open properly
+                // Do NOT call showSharingSettings() - it causes infinite recursion
+                if (docEditor && typeof docEditor.setSharingSettings === 'function') {
+                    console.log("[ONLYOFFICE] Calling setSharingSettings inside onRequestSharingSettings");
+                    try {
+                        // Use setTimeout to avoid immediate recursion
+                        setTimeout(function() {
+                            if (sharingSettingsCallCount <= 1) {
+                                docEditor.setSharingSettings(returnObj);
+                                console.log("[ONLYOFFICE] setSharingSettings called successfully");
+                            } else {
+                                console.log("[ONLYOFFICE] Skipping setSharingSettings to prevent recursion");
+                            }
+                        }, 0);
+                    } catch (error) {
+                        console.error("[ONLYOFFICE] Error in setSharingSettings:", error);
+                    }
+                } else {
+                    console.warn("[ONLYOFFICE] setSharingSettings method not available");
+                }
                 
                 // Reset counter after a delay
                 if (sharingSettingsCallTimeout) {
@@ -275,7 +296,7 @@
                 }, 1000);
                 
                 // Return the settings object - ONLYOFFICE editor will use this to open the dialog
-                // Do NOT call showSharingSettings() here - it causes infinite recursion
+                // The dialog should open automatically after setSharingSettings is called
                 return returnObj;
             } else {
                 console.warn("[ONLYOFFICE] Cannot return sharing settings - missing required objects");

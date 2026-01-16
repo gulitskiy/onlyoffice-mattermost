@@ -271,34 +271,15 @@
                 console.log("[ONLYOFFICE] Returning sharing settings object:", JSON.stringify(returnObj, null, 2));
                 
                 // According to ONLYOFFICE API documentation, we MUST call setSharingSettings inside onRequestSharingSettings
-                // Then we need to explicitly call showSharingSettings to open the dialog
+                // The editor will automatically open the dialog after setSharingSettings is called
+                // Do NOT call showSharingSettings() - it causes infinite recursion by triggering onRequestSharingSettings again
                 if (docEditor && typeof docEditor.setSharingSettings === 'function') {
                     console.log("[ONLYOFFICE] Calling setSharingSettings inside onRequestSharingSettings");
                     try {
-                        // Call setSharingSettings first
+                        // Call setSharingSettings - editor should automatically open dialog after this
                         docEditor.setSharingSettings(returnObj);
                         console.log("[ONLYOFFICE] setSharingSettings called successfully");
-                        
-                        // Then explicitly open the dialog with showSharingSettings
-                        // Use a small delay to ensure setSharingSettings has processed
-                        if (docEditor && typeof docEditor.showSharingSettings === 'function') {
-                            setTimeout(function() {
-                                // Check flag again to prevent recursion
-                                if (!isProcessingSharingSettings) {
-                                    console.log("[ONLYOFFICE] Flag already reset, skipping showSharingSettings to prevent recursion");
-                                    return;
-                                }
-                                console.log("[ONLYOFFICE] Calling showSharingSettings to open dialog");
-                                try {
-                                    docEditor.showSharingSettings();
-                                    console.log("[ONLYOFFICE] showSharingSettings called successfully");
-                                } catch (showError) {
-                                    console.error("[ONLYOFFICE] Error in showSharingSettings:", showError);
-                                }
-                            }, 100); // Small delay to ensure setSharingSettings has processed
-                        } else {
-                            console.warn("[ONLYOFFICE] showSharingSettings method not available");
-                        }
+                        console.log("[ONLYOFFICE] Editor should automatically open sharing dialog after setSharingSettings");
                     } catch (error) {
                         console.error("[ONLYOFFICE] Error in setSharingSettings:", error);
                         isProcessingSharingSettings = false;

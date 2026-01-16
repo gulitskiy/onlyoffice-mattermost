@@ -251,17 +251,42 @@
                         console.log("[ONLYOFFICE] setSharingSettings called successfully");
                         
                         // Explicitly open the sharing dialog after setting the settings
-                        // Use a small delay to ensure setSharingSettings has processed
+                        // Use a delay to ensure setSharingSettings has processed
+                        // In nested iframe structure (Mattermost -> plugin -> ONLYOFFICE), 
+                        // we need more time for the editor to process the settings
                         if (docEditor && typeof docEditor.showSharingSettings === 'function') {
                             setTimeout(function() {
                                 console.log("[ONLYOFFICE] Calling showSharingSettings to open dialog");
+                                console.log("[ONLYOFFICE] Current window location:", window.location.href);
+                                console.log("[ONLYOFFICE] Is in iframe:", window.parent !== window);
                                 try {
-                                    docEditor.showSharingSettings();
+                                    var result = docEditor.showSharingSettings();
+                                    console.log("[ONLYOFFICE] showSharingSettings result:", result);
                                     console.log("[ONLYOFFICE] showSharingSettings called successfully");
+                                    
+                                    // Check if dialog elements appear in the ONLYOFFICE iframe after a delay
+                                    // Note: Dialog is rendered inside ONLYOFFICE iframe, not in our iframe
+                                    setTimeout(function() {
+                                        console.log("[ONLYOFFICE] Checking for dialog in ONLYOFFICE iframe (if accessible)");
+                                        // Try to access the ONLYOFFICE iframe if it's in the same origin
+                                        try {
+                                            var onlyofficeIframe = document.getElementById('iframeEditor');
+                                            if (onlyofficeIframe && onlyofficeIframe.contentDocument) {
+                                                var dialogs = onlyofficeIframe.contentDocument.querySelectorAll('[class*="dialog"], [id*="dialog"], [class*="modal"], [id*="modal"], [class*="sharing"], [id*="sharing"]');
+                                                console.log("[ONLYOFFICE] Found dialog elements in ONLYOFFICE iframe:", dialogs.length);
+                                            } else {
+                                                console.log("[ONLYOFFICE] Cannot access ONLYOFFICE iframe content (cross-origin or not loaded)");
+                                            }
+                                        } catch (e) {
+                                            console.log("[ONLYOFFICE] Cannot access ONLYOFFICE iframe:", e.message);
+                                            console.log("[ONLYOFFICE] This is normal - dialog is rendered inside ONLYOFFICE iframe");
+                                        }
+                                    }, 500);
                                 } catch (showError) {
                                     console.error("[ONLYOFFICE] Error in showSharingSettings:", showError);
+                                    console.error("[ONLYOFFICE] Error details:", showError.name, showError.message, showError.stack);
                                 }
-                            }, 50); // Small delay to ensure setSharingSettings has processed
+                            }, 200); // Increased delay for nested iframe structure
                         } else {
                             console.warn("[ONLYOFFICE] showSharingSettings method not available");
                         }

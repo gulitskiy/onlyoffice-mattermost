@@ -27,6 +27,8 @@ import editor from 'public/images/editor.svg';
 import editorDark from 'public/images/editor_dark.svg';
 import permissions from 'public/images/permissions.svg';
 import permissionsDark from 'public/images/permissions_dark.svg';
+import copyLink from 'public/images/copy_link.svg';
+import copyLinkDark from 'public/images/copy_link_dark.svg';
 import React, {useState} from 'react';
 import {useDispatch} from 'react-redux';
 import {openEditor, openPermissions} from 'redux/actions';
@@ -109,15 +111,15 @@ export default function OnlyofficeFilePreview(props: Props) {
                         data-theme={props.theme}
                         data-dark-theme={props.darkTheme}
                     />
-                    <button
-                        className='onlyoffice_preview__copy-btn'
+                    <img
+                        className='onlyoffice_preview__btn'
+                        alt={linkCopied ? i18n['preview.link_copied'] : i18n['preview.copy_link_button']}
                         onClick={handleCopyLink}
                         title={linkCopied ? i18n['preview.link_copied'] : i18n['preview.copy_link_button']}
+                        src={props.theme === 'dark' ? copyLinkDark : copyLink}
                         data-theme={props.theme}
                         data-dark-theme={props.darkTheme}
-                    >
-                        {linkCopied ? i18n['preview.link_copied'] : '📋'}
-                    </button>
+                    />
                 </div>
             </div>
         </div>

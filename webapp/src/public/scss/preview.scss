@@ -33,40 +33,6 @@
     }
 }
 
-.onlyoffice_preview__copy-btn {
-    transition: box-shadow .3s, opacity .3s;
-    margin-right: .5rem;
-    cursor: pointer;
-    background: transparent;
-    border: none;
-    padding: 0.25rem 0.5rem;
-    font-size: 1.2rem;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 2rem;
-    height: 2rem;
-    border-radius: 4px;
-    opacity: 0.7;
-
-    &:hover {
-        opacity: 1;
-        @include light-theme {
-            box-shadow: 0 0 11px $shadow_dark;
-            background: rgba(0, 0, 0, 0.05);
-        }
-
-        @include dark-theme {
-            box-shadow: 0 0 11px $shadow_light;
-            background: rgba(255, 255, 255, 0.1);
-        }
-    }
-
-    &:active {
-        opacity: 0.8;
-    }
-}
 
 .file-details__onlyoffice {
     display: flex;

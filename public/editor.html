@@ -228,9 +228,68 @@
                 }
                 
                 console.log("[ONLYOFFICE] Returning sharing settings object:", JSON.stringify(returnObj, null, 2));
-                console.log("[ONLYOFFICE] Editor should automatically open sharing dialog with these settings");
                 
-                // Return the settings object - ONLYOFFICE editor will open the dialog automatically
+                // First, explicitly set the sharing settings using setSharingSettings
+                if (docEditor && typeof docEditor.setSharingSettings === 'function') {
+                    console.log("[ONLYOFFICE] Step 1: Setting sharing settings explicitly");
+                    try {
+                        var setResult = docEditor.setSharingSettings(returnObj);
+                        console.log("[ONLYOFFICE] setSharingSettings result:", setResult);
+                        console.log("[ONLYOFFICE] setSharingSettings completed successfully");
+                    } catch (setError) {
+                        console.error("[ONLYOFFICE] Error in setSharingSettings:", setError);
+                        console.error("[ONLYOFFICE] Error details:", setError.name, setError.message, setError.stack);
+                    }
+                } else {
+                    console.warn("[ONLYOFFICE] setSharingSettings method not available");
+                }
+                
+                // Then, explicitly open the sharing dialog using showSharingSettings
+                // Use setTimeout to ensure settings are set first
+                if (docEditor && typeof docEditor.showSharingSettings === 'function') {
+                    console.log("[ONLYOFFICE] Step 2: Scheduling showSharingSettings call");
+                    setTimeout(function() {
+                        console.log("[ONLYOFFICE] Step 2: Executing showSharingSettings now");
+                        try {
+                            var showResult = docEditor.showSharingSettings();
+                            console.log("[ONLYOFFICE] showSharingSettings result:", showResult);
+                            console.log("[ONLYOFFICE] showSharingSettings called successfully");
+                            
+                            // Check if dialog appeared in DOM after a delay
+                            setTimeout(function() {
+                                console.log("[ONLYOFFICE] Step 3: Checking for dialog elements in DOM");
+                                var dialogs = document.querySelectorAll('[class*="dialog"], [id*="dialog"], [class*="modal"], [id*="modal"], [class*="sharing"], [id*="sharing"], [class*="access"], [id*="access"]');
+                                console.log("[ONLYOFFICE] Found dialog/modal elements in DOM:", dialogs.length);
+                                if (dialogs.length > 0) {
+                                    dialogs.forEach(function(dialog, idx) {
+                                        var rect = dialog.getBoundingClientRect();
+                                        console.log("[ONLYOFFICE] Dialog " + idx + ":", {
+                                            className: dialog.className,
+                                            id: dialog.id,
+                                            display: dialog.style.display,
+                                            visibility: dialog.style.visibility,
+                                            zIndex: dialog.style.zIndex,
+                                            position: dialog.style.position,
+                                            visible: rect.width > 0 && rect.height > 0,
+                                            dimensions: rect.width + "x" + rect.height
+                                        });
+                                    });
+                                } else {
+                                    console.warn("[ONLYOFFICE] No dialog elements found in DOM");
+                                    console.warn("[ONLYOFFICE] Dialog may be rendered in iframe or not yet created");
+                                }
+                            }, 500);
+                        } catch (showError) {
+                            console.error("[ONLYOFFICE] Error in showSharingSettings:", showError);
+                            console.error("[ONLYOFFICE] Error details:", showError.name, showError.message, showError.stack);
+                        }
+                    }, 150);
+                } else {
+                    console.warn("[ONLYOFFICE] showSharingSettings method not available");
+                }
+                
+                // Return the settings object - ONLYOFFICE editor may also use this
+                console.log("[ONLYOFFICE] Step 3: Returning sharing settings object to editor");
                 return returnObj;
             } else {
                 console.warn("[ONLYOFFICE] Cannot return sharing settings - missing required objects");

@@ -164,17 +164,31 @@
         // This handler is required for the sharing button to appear in the editor
         events["onRequestSharingSettings"] = function () {
             // Get sharing settings from document config
-            if (docEditor && config && config.document && config.document.info && config.document.info.sharingSettings) {
-                // Return current sharing settings to show the sharing button
-                docEditor.setSharingSettings({
-                    sharingSettings: config.document.info.sharingSettings
-                });
-            } else if (docEditor && config && config.document && config.document.info) {
-                // Even if no sharing settings, return empty array to enable sharing button
-                docEditor.setSharingSettings({
-                    sharingSettings: []
-                });
+            // This is called when user clicks the sharing button
+            if (docEditor && config && config.document && config.document.info) {
+                var sharingSettings = [];
+                if (config.document.info.sharingSettings && Array.isArray(config.document.info.sharingSettings)) {
+                    sharingSettings = config.document.info.sharingSettings;
+                }
+                // Return current sharing settings to show the sharing dialog
+                try {
+                    docEditor.setSharingSettings({
+                        sharingSettings: sharingSettings
+                    });
+                } catch (error) {
+                    innerAlert("Error setting sharing settings: " + error.message);
+                }
             }
+        };
+        
+        // Add handler for sharing settings changes
+        // This is called when user modifies sharing settings in the editor
+        events["onSharingSettingsChanged"] = function (event) {
+            // In Mattermost, sharing is managed through the permissions modal
+            // We log the changes but actual updates should go through Mattermost UI
+            // The sharing dialog in ONLYOFFICE will show current settings but
+            // changes should be made through Mattermost permissions interface
+            innerAlert("Sharing settings changed in editor. Please use Mattermost permissions interface to modify access rights.");
         };
         
         config["events"] = events;
@@ -183,6 +197,22 @@
             try {
                 docEditor = new DocsAPI.DocEditor("iframeEditor", config);
                 fixSize();
+                
+                // Ensure sharing settings are set after editor is initialized
+                // This is a fallback in case onRequestSharingSettings wasn't called
+                if (config && config.document && config.document.info && config.document.info.sharingSettings) {
+                    setTimeout(function() {
+                        if (docEditor && docEditor.setSharingSettings) {
+                            try {
+                                docEditor.setSharingSettings({
+                                    sharingSettings: config.document.info.sharingSettings
+                                });
+                            } catch (error) {
+                                innerAlert("Error setting sharing settings on init: " + error.message);
+                            }
+                        }
+                    }, 1000);
+                }
             } catch {
                 innerAlert('[ONLYOFFICE Error]: could not initialize DocsAPI instance');
                 // Check if we're in a top-level window (not in iframe)

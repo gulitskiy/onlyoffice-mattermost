@@ -65,10 +65,15 @@ type User struct {
 }
 
 type Customization struct {
-	Goback        Goback `json:"goback"`
-	UiTheme       string `json:"uiTheme,omitempty"`
-	Close         Close  `json:"close,omitempty"`
-	CompactToolbar bool  `json:"compactToolbar,omitempty"`
+	Goback        Goback  `json:"goback"`
+	UiTheme       string  `json:"uiTheme,omitempty"`
+	Close         Close   `json:"close,omitempty"`
+	CompactToolbar bool   `json:"compactToolbar,omitempty"`
+	Features      Features `json:"features,omitempty"`
+}
+
+type Features struct {
+	Sharing bool `json:"sharing,omitempty"`
 }
 
 type Close struct {

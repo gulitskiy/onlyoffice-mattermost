@@ -270,6 +270,9 @@ func (h *EditorHandler) Handle(rw http.ResponseWriter, r *http.Request) {
 				},
 				UiTheme:       theme,
 				CompactToolbar: false, // Ensure sharing button is visible
+				Features: oomodel.Features{
+					Sharing: true, // Enable sharing functionality
+				},
 				Close: oomodel.Close{
 					Visible: true,
 				},

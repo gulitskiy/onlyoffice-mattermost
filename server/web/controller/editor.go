@@ -178,38 +178,68 @@ func (h *EditorHandler) Handle(rw http.ResponseWriter, r *http.Request) {
 		theme = "theme-dark"
 	}
 
-	// Build sharing settings if user is the file author
+	// Build sharing settings for all users with file access
+	// This allows users to see who has access to the file in the editor
 	var documentInfo *oomodel.DocumentInfo
-	if payload.UserID == post.UserId {
-		// Get all users with permissions for this file
-		userPermissions := h.fileHelper.GetPostPermissionsByFileID(payload.FileID, post, h.api.GetUser)
-		sharingSettings := make([]oomodel.SharingSetting, 0, len(userPermissions)+1)
+	userPermissions := h.fileHelper.GetPostPermissionsByFileID(payload.FileID, post, h.api.GetUser)
+	sharingSettings := make([]oomodel.SharingSetting, 0, len(userPermissions)+2)
+	
+	// Track which users we've already added to avoid duplicates
+	addedUsers := make(map[string]bool)
 
-		// Add author with Full Access
-		authorUser, authorErr := h.api.GetUser(post.UserId)
-		if authorErr == nil {
+	// Add author with Full Access
+	authorUser, authorErr := h.api.GetUser(post.UserId)
+	if authorErr == nil {
+		sharingSettings = append(sharingSettings, oomodel.SharingSetting{
+			User:        authorUser.Username,
+			Permissions: "Full Access",
+		})
+		addedUsers[post.UserId] = true
+	}
+
+	// Add current user if not already added (in case they're not the author)
+	if !addedUsers[payload.UserID] && payload.UserID != post.UserId {
+		currentUserPerms := h.fileHelper.GetFilePermissionsByUserID(payload.UserID, payload.FileID, post)
+		currentUser, currentUserErr := h.api.GetUser(payload.UserID)
+		if currentUserErr == nil {
 			sharingSettings = append(sharingSettings, oomodel.SharingSetting{
-				User:        authorUser.Username,
-				Permissions: "Full Access",
+				User:        currentUser.Username,
+				Permissions: convertPermissionsToSharingString(currentUserPerms),
 			})
+			addedUsers[payload.UserID] = true
 		}
+	}
 
-		// Add other users with their permissions
-		for _, userPerm := range userPermissions {
-			// Skip author as we already added them
-			if userPerm.ID == post.UserId {
-				continue
-			}
+	// Add other users with their permissions
+	for _, userPerm := range userPermissions {
+		// Skip users we've already added
+		if addedUsers[userPerm.ID] {
+			continue
+		}
+		
+		// Handle wildcard user (*) for default permissions
+		if userPerm.ID == h.fileHelper.GetWildcardUser() {
+			// For wildcard, we don't set User field
+			// This represents default permissions for all other users
+			sharingSettings = append(sharingSettings, oomodel.SharingSetting{
+				Permissions: convertPermissionsToSharingString(userPerm.Permissions),
+				IsLink:      false,
+			})
+		} else {
+			// Regular user with specific permissions
 			sharingSettings = append(sharingSettings, oomodel.SharingSetting{
 				User:        userPerm.Username,
 				Permissions: convertPermissionsToSharingString(userPerm.Permissions),
 			})
+			addedUsers[userPerm.ID] = true
 		}
+	}
 
-		if len(sharingSettings) > 0 {
-			documentInfo = &oomodel.DocumentInfo{
-				SharingSettings: sharingSettings,
-			}
+	// Always include sharing settings if there are any users with permissions
+	// This ensures sharing is visible in the editor for all users
+	if len(sharingSettings) > 0 {
+		documentInfo = &oomodel.DocumentInfo{
+			SharingSettings: sharingSettings,
 		}
 	}
 

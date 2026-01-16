@@ -18,7 +18,7 @@
 package file
 
 const (
-	onlyofficeLoggerPrefix string = "[ONLYOFFICE Helper]: "
+	onlyofficeLoggerPrefix string = "[ONLYOFFICE (EC UMTO) Helper]: "
 
 	onlyofficePermissionsProp          string = "ONLYOFFICE_PERMISSIONS"
 	onlyofficePermissionsPropSeparator string = "_"

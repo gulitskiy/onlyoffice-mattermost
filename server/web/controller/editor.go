@@ -241,6 +241,10 @@ func (h *EditorHandler) Handle(rw http.ResponseWriter, r *http.Request) {
 		documentInfo = &oomodel.DocumentInfo{
 			SharingSettings: sharingSettings,
 		}
+		// Set owner to author's name for sharing functionality
+		if authorErr == nil {
+			documentInfo.Owner = authorUser.Username
+		}
 	}
 
 	config := oomodel.Config{
@@ -264,12 +268,21 @@ func (h *EditorHandler) Handle(rw http.ResponseWriter, r *http.Request) {
 				Goback: oomodel.Goback{
 					RequestClose: true,
 				},
-				UiTheme: theme,
+				UiTheme:       theme,
+				CompactToolbar: false, // Ensure sharing button is visible
 				Close: oomodel.Close{
 					Visible: true,
 				},
 			},
 			Lang: payload.Lang,
+			// Set mode to "edit" if user has edit permissions, otherwise "view"
+			// Sharing button is only visible in edit mode
+			Mode: func() string {
+				if permissions.Edit {
+					return "edit"
+				}
+				return "view"
+			}(),
 		},
 		Type: tools.IsMobile(r.Header.Get("User-Agent")),
 	}

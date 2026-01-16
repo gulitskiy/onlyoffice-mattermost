@@ -40,6 +40,7 @@ type Document struct {
 }
 
 type DocumentInfo struct {
+	Owner           string          `json:"owner,omitempty"`
 	SharingSettings []SharingSetting `json:"sharingSettings,omitempty"`
 }
 
@@ -54,6 +55,7 @@ type EditorConfig struct {
 	CallbackURL   string        `json:"callbackUrl"`
 	Customization Customization `json:"customization,omitempty"`
 	Lang          string        `json:"lang,omitempty"`
+	Mode          string        `json:"mode,omitempty"`
 }
 
 type User struct {
@@ -63,9 +65,10 @@ type User struct {
 }
 
 type Customization struct {
-	Goback  Goback `json:"goback"`
-	UiTheme string `json:"uiTheme,omitempty"`
-	Close   Close  `json:"close,omitempty"`
+	Goback        Goback `json:"goback"`
+	UiTheme       string `json:"uiTheme,omitempty"`
+	Close         Close  `json:"close,omitempty"`
+	CompactToolbar bool  `json:"compactToolbar,omitempty"`
 }
 
 type Close struct {

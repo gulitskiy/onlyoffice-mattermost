@@ -159,6 +159,24 @@
         };
 
         var config = {{ .config }};
+        
+        // Add onRequestSharingSettings handler after config is defined
+        // This handler is required for the sharing button to appear in the editor
+        events["onRequestSharingSettings"] = function () {
+            // Get sharing settings from document config
+            if (docEditor && config && config.document && config.document.info && config.document.info.sharingSettings) {
+                // Return current sharing settings to show the sharing button
+                docEditor.setSharingSettings({
+                    sharingSettings: config.document.info.sharingSettings
+                });
+            } else if (docEditor && config && config.document && config.document.info) {
+                // Even if no sharing settings, return empty array to enable sharing button
+                docEditor.setSharingSettings({
+                    sharingSettings: []
+                });
+            }
+        };
+        
         config["events"] = events;
 
         var connectEditor = function () {

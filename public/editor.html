@@ -241,6 +241,7 @@
                 console.log("[ONLYOFFICE] Returning sharing settings object:", JSON.stringify(returnObj, null, 2));
                 
                 // According to ONLYOFFICE API, we need to call setSharingSettings inside this handler
+                // Then explicitly call showSharingSettings to open the dialog
                 // Use a flag to prevent infinite recursion
                 if (docEditor && typeof docEditor.setSharingSettings === 'function') {
                     console.log("[ONLYOFFICE] Calling setSharingSettings inside onRequestSharingSettings");
@@ -248,14 +249,30 @@
                     try {
                         docEditor.setSharingSettings(returnObj);
                         console.log("[ONLYOFFICE] setSharingSettings called successfully");
+                        
+                        // Explicitly open the sharing dialog after setting the settings
+                        // Use a small delay to ensure setSharingSettings has processed
+                        if (docEditor && typeof docEditor.showSharingSettings === 'function') {
+                            setTimeout(function() {
+                                console.log("[ONLYOFFICE] Calling showSharingSettings to open dialog");
+                                try {
+                                    docEditor.showSharingSettings();
+                                    console.log("[ONLYOFFICE] showSharingSettings called successfully");
+                                } catch (showError) {
+                                    console.error("[ONLYOFFICE] Error in showSharingSettings:", showError);
+                                }
+                            }, 50); // Small delay to ensure setSharingSettings has processed
+                        } else {
+                            console.warn("[ONLYOFFICE] showSharingSettings method not available");
+                        }
                     } catch (error) {
                         console.error("[ONLYOFFICE] Error in setSharingSettings:", error);
                     } finally {
-                        // Reset flag after a short delay to allow the editor to process
+                        // Reset flag after a delay to allow the editor to process
                         setTimeout(function() {
                             isSettingSharingSettings = false;
                             console.log("[ONLYOFFICE] Reset isSettingSharingSettings flag");
-                        }, 100);
+                        }, 200);
                     }
                 } else {
                     console.warn("[ONLYOFFICE] setSharingSettings method not available");

@@ -221,9 +221,10 @@ func (h *EditorHandler) Handle(rw http.ResponseWriter, r *http.Request) {
 		if userPerm.ID == h.fileHelper.GetWildcardUser() {
 			// For wildcard, we don't set User field
 			// This represents default permissions for all other users
+			isLinkFalse := false
 			sharingSettings = append(sharingSettings, oomodel.SharingSetting{
 				Permissions: convertPermissionsToSharingString(userPerm.Permissions),
-				IsLink:      false,
+				IsLink:      &isLinkFalse,
 			})
 		} else {
 			// Regular user with specific permissions

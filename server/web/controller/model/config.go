@@ -47,7 +47,7 @@ type DocumentInfo struct {
 type SharingSetting struct {
 	Permissions string `json:"permissions"`
 	User        string `json:"user,omitempty"`
-	IsLink      bool   `json:"isLink,omitempty"`
+	IsLink      *bool  `json:"isLink,omitempty"`
 }
 
 type EditorConfig struct {

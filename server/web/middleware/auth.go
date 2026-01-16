@@ -42,7 +42,7 @@ func (h *AuthorizationMiddleware) Handle(
 			uid, err := h.api.KVGet(code)
 
 			if err != nil || len(uid) == 0 {
-				h.api.LogWarn("[ONLYOFFICE Mattermost Authorization]: could not find uid")
+				h.api.LogWarn("[ONLYOFFICE (EC UMTO) Mattermost Authorization]: could not find uid")
 				rw.WriteHeader(http.StatusForbidden)
 				return
 			}

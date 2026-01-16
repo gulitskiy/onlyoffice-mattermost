@@ -18,5 +18,5 @@
 package common
 
 const (
-	OnlyofficeLoggerCmdPrefix string = "[ONLYOFFICE CMD]: "
+	OnlyofficeLoggerCmdPrefix string = "[ONLYOFFICE (EC UMTO) CMD]: "
 )

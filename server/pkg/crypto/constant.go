@@ -18,5 +18,5 @@
 package crypto
 
 const (
-	onlyofficeLoggerCryptoPrefix string = "[ONLYOFFICE Crypto]: "
+	onlyofficeLoggerCryptoPrefix string = "[ONLYOFFICE (EC UMTO) Crypto]: "
 )

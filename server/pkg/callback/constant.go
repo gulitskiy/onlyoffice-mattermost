@@ -18,6 +18,6 @@
 package callback
 
 const (
-	onlyofficeFilePersistenceErrorPrefix string = "[ONLYOFFICE Filestore]: "
-	onlyofficeLoggerCallbackPrefix       string = "[ONLYOFFICE Callback]: "
+	onlyofficeFilePersistenceErrorPrefix string = "[ONLYOFFICE (EC UMTO) Filestore]: "
+	onlyofficeLoggerCallbackPrefix       string = "[ONLYOFFICE (EC UMTO) Callback]: "
 )

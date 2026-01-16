@@ -17,4 +17,4 @@
  */
 package bot
 
-const onlyofficeLoggerBotPrefix string = "[ONLYOFFICE Bot]: "
+const onlyofficeLoggerBotPrefix string = "[ONLYOFFICE (EC UMTO) Bot]: "

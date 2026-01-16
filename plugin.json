@@ -1,6 +1,6 @@
 {
     "id": "com.onlyoffice.mattermost.custom",
-    "name": "ONLYOFFICE",
+    "name": "ONLYOFFICE (EC UMTO)",
     "description": "This plugin allows users to edit office documents from Mattermost using ONLYOFFICE Docs.",
     "homepage_url": "https://github.com/gulitskiy/onlyoffice-mattermost",
     "support_url": "https://github.com/gulitskiy/onlyoffice-mattermost/issues",

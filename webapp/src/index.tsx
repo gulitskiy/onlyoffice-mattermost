@@ -106,7 +106,7 @@ export default class Plugin {
         registry.registerFileUploadMethod(
             <ManagerIcon store={store}/>,
             () => dispatch(openManager()),
-            'ONLYOFFICE',
+            'ONLYOFFICE (EC UMTO)',
         );
     }
 }

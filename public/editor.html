@@ -178,9 +178,16 @@
         
         console.log("[ONLYOFFICE] Config loaded:", config);
         console.log("[ONLYOFFICE] Document info:", config.document ? config.document.info : "no document");
-        console.log("[ONLYOFFICE] Sharing settings:", config.document && config.document.info ? config.document.info.sharingSettings : "no sharing settings");
+        if (config.document && config.document.info) {
+            console.log("[ONLYOFFICE] Document owner:", config.document.info.owner);
+            console.log("[ONLYOFFICE] Sharing settings:", JSON.stringify(config.document.info.sharingSettings, null, 2));
+            console.log("[ONLYOFFICE] Sharing settings count:", config.document.info.sharingSettings ? config.document.info.sharingSettings.length : 0);
+        } else {
+            console.log("[ONLYOFFICE] No document info or sharing settings");
+        }
         console.log("[ONLYOFFICE] Editor config mode:", config.editorConfig ? config.editorConfig.mode : "no mode");
         console.log("[ONLYOFFICE] Customization features:", config.editorConfig && config.editorConfig.customization ? config.editorConfig.customization.features : "no features");
+        console.log("[ONLYOFFICE] Document permissions:", config.document ? config.document.permissions : "no permissions");
         
         // Add onRequestSharingSettings handler after config is defined
         // This handler is required for the sharing button to appear in the editor
@@ -198,22 +205,61 @@
                 if (config.document.info.sharingSettings && Array.isArray(config.document.info.sharingSettings)) {
                     sharingSettings = config.document.info.sharingSettings;
                 }
-                console.log("[ONLYOFFICE] Sharing settings to set:", sharingSettings);
+                console.log("[ONLYOFFICE] Sharing settings to set:", JSON.stringify(sharingSettings, null, 2));
+                console.log("[ONLYOFFICE] Sharing settings array length:", sharingSettings.length);
+                sharingSettings.forEach(function(setting, index) {
+                    console.log("[ONLYOFFICE] Setting " + index + ":", JSON.stringify(setting));
+                    console.log("[ONLYOFFICE] Setting " + index + " user:", setting.user);
+                    console.log("[ONLYOFFICE] Setting " + index + " permissions:", setting.permissions);
+                    console.log("[ONLYOFFICE] Setting " + index + " isLink:", setting.isLink);
+                });
                 console.log("[ONLYOFFICE] docEditor.setSharingSettings exists:", typeof docEditor.setSharingSettings === 'function');
+                console.log("[ONLYOFFICE] All docEditor methods (first 30):", docEditor ? Object.keys(docEditor).filter(k => typeof docEditor[k] === 'function').sort().slice(0, 30) : "no methods");
+                console.log("[ONLYOFFICE] Methods containing 'share', 'shar', 'dialog', 'access':", docEditor ? Object.keys(docEditor).filter(k => typeof docEditor[k] === 'function' && (k.toLowerCase().includes('shar') || k.toLowerCase().includes('dialog') || k.toLowerCase().includes('access'))) : "no methods");
                 
                 // Return current sharing settings to show the sharing dialog
+                // According to ONLYOFFICE API, setSharingSettings should automatically open the dialog
                 try {
                     if (typeof docEditor.setSharingSettings === 'function') {
-                        docEditor.setSharingSettings({
+                        // Build settings object with owner if available
+                        var settingsObj = {
                             sharingSettings: sharingSettings
-                        });
+                        };
+                        
+                        // Add owner if available in document info
+                        if (config.document.info.owner) {
+                            settingsObj.owner = config.document.info.owner;
+                            console.log("[ONLYOFFICE] Adding owner to settings:", config.document.info.owner);
+                        }
+                        
+                        console.log("[ONLYOFFICE] Calling setSharingSettings with:", JSON.stringify(settingsObj, null, 2));
+                        console.log("[ONLYOFFICE] setSharingSettings function signature:", docEditor.setSharingSettings.toString().substring(0, 200));
+                        
+                        var result = docEditor.setSharingSettings(settingsObj);
+                        console.log("[ONLYOFFICE] setSharingSettings result:", result);
                         console.log("[ONLYOFFICE] setSharingSettings called successfully");
+                        console.log("[ONLYOFFICE] After setSharingSettings - checking DOM for dialog elements");
+                        
+                        // Check if dialog appeared in DOM after a short delay
+                        setTimeout(function() {
+                            var dialogs = document.querySelectorAll('[class*="dialog"], [id*="dialog"], [class*="modal"], [id*="modal"], [class*="sharing"], [id*="sharing"]');
+                            console.log("[ONLYOFFICE] Found dialog/modal elements in DOM:", dialogs.length);
+                            if (dialogs.length > 0) {
+                                dialogs.forEach(function(dialog, idx) {
+                                    console.log("[ONLYOFFICE] Dialog " + idx + ":", dialog.className, dialog.id);
+                                });
+                            }
+                        }, 1000);
                     } else {
                         console.error("[ONLYOFFICE] setSharingSettings is not a function");
+                        console.error("[ONLYOFFICE] Available methods:", Object.keys(docEditor).filter(k => typeof docEditor[k] === 'function'));
                         innerAlert("Error: setSharingSettings is not available");
                     }
                 } catch (error) {
                     console.error("[ONLYOFFICE] Error setting sharing settings:", error);
+                    console.error("[ONLYOFFICE] Error name:", error.name);
+                    console.error("[ONLYOFFICE] Error message:", error.message);
+                    console.error("[ONLYOFFICE] Error stack:", error.stack);
                     innerAlert("Error setting sharing settings: " + error.message);
                 }
             } else {

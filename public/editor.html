@@ -87,18 +87,38 @@
             innerAlert("Document editor ready");
             const form = document.getElementsByClassName('form').item(0);
             if (form) {
-                window.parent.dispatchEvent(ONLYOFFICE_READY_EVENT);
+                // Check if we're in a top-level window (not in iframe)
+                if (window.parent === window) {
+                    window.dispatchEvent(ONLYOFFICE_READY_EVENT);
+                } else {
+                    window.parent.dispatchEvent(ONLYOFFICE_READY_EVENT);
+                }
                 form.classList.add('form_visible');
             }
         };
 
         var onRequestClose = function () {
+            // If opened via window.open(), close the window
             if (window.opener) {
                 window.close();
                 return;
             }
+            
+            // If opened in a top-level window (not in iframe, not inside Mattermost)
+            // Close the browser tab/window
+            if (window.parent === window) {
+                if (docEditor) {
+                    docEditor.destroyEditor();
+                }
+                window.close();
+                return;
+            }
+            
+            // If opened in iframe (inside Mattermost), send event to parent
             window.parent.dispatchEvent(ONLYOFFICE_CLOSE_EVENT);
-            docEditor.destroyEditor();
+            if (docEditor) {
+                docEditor.destroyEditor();
+            }
         };
 
         var replaceActionLink = function (href, linkParam) {
@@ -122,7 +142,13 @@
         };
 
         var onOutdatedVersion = function (event) {
-            window.parent.dispatchEvent(ONLYOFFICE_CLOSE_EVENT);
+            // Check if we're in a top-level window (not in iframe)
+            if (window.parent === window) {
+                window.dispatchEvent(ONLYOFFICE_CLOSE_EVENT);
+                window.close();
+            } else {
+                window.parent.dispatchEvent(ONLYOFFICE_CLOSE_EVENT);
+            }
         };
 
         var events = {
@@ -141,7 +167,12 @@
                 fixSize();
             } catch {
                 innerAlert('[ONLYOFFICE Error]: could not initialize DocsAPI instance');
-                window.parent.dispatchEvent(ONLYOFFICE_ERROR_EVENT);
+                // Check if we're in a top-level window (not in iframe)
+                if (window.parent === window) {
+                    window.dispatchEvent(ONLYOFFICE_ERROR_EVENT);
+                } else {
+                    window.parent.dispatchEvent(ONLYOFFICE_ERROR_EVENT);
+                }
             }
         };
 

@@ -21,12 +21,13 @@
 
 import fileHelper from 'util/file';
 import {getTranslations} from 'util/lang';
+import {copyEditorUrl} from 'util/url';
 
 import editor from 'public/images/editor.svg';
 import editorDark from 'public/images/editor_dark.svg';
 import permissions from 'public/images/permissions.svg';
 import permissionsDark from 'public/images/permissions_dark.svg';
-import React from 'react';
+import React, {useState} from 'react';
 import {useDispatch} from 'react-redux';
 import {openEditor, openPermissions} from 'redux/actions';
 
@@ -45,6 +46,18 @@ export default function OnlyofficeFilePreview(props: Props) {
     const dispatch = useDispatch();
     const icon = fileHelper.getIconByExt(props.fileInfo.extension);
     const showPermissions = fileHelper.isExtensionSupported(props.fileInfo.extension, true) && fileHelper.isFileAuthor(props.fileInfo);
+    const [linkCopied, setLinkCopied] = useState(false);
+
+    const handleCopyLink = async () => {
+        try {
+            await copyEditorUrl(props.fileInfo);
+            setLinkCopied(true);
+            setTimeout(() => setLinkCopied(false), 2000);
+        } catch (error) {
+            // Silently fail - user can try again
+            console.error('Failed to copy editor URL:', error);
+        }
+    };
 
     return (
         <div
@@ -96,6 +109,15 @@ export default function OnlyofficeFilePreview(props: Props) {
                         data-theme={props.theme}
                         data-dark-theme={props.darkTheme}
                     />
+                    <button
+                        className='onlyoffice_preview__copy-btn'
+                        onClick={handleCopyLink}
+                        title={linkCopied ? i18n['preview.link_copied'] : i18n['preview.copy_link_button']}
+                        data-theme={props.theme}
+                        data-dark-theme={props.darkTheme}
+                    >
+                        {linkCopied ? i18n['preview.link_copied'] : '📋'}
+                    </button>
                 </div>
             </div>
         </div>

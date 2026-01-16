@@ -21,6 +21,7 @@
 
 import {isConvertSupported, isExtensionSupported, isFileAuthor, setPluginConfig} from 'util/file';
 import {getTranslations} from 'util/lang';
+import {copyEditorUrl} from 'util/url';
 
 import {getPluginConfig} from 'api';
 import manifest from 'manifest';
@@ -70,6 +71,18 @@ export default class Plugin {
                 (fileInfo: FileInfo) => isExtensionSupported(fileInfo.extension),
                 () => getTranslations()['plugin.open_button'],
                 (fileInfo: FileInfo) => dispatch(openEditor(fileInfo)),
+            );
+            registry.registerFileDropdownMenuAction(
+                (fileInfo: FileInfo) => isExtensionSupported(fileInfo.extension),
+                () => getTranslations()['plugin.copy_link_button'],
+                async (fileInfo: FileInfo) => {
+                    try {
+                        await copyEditorUrl(fileInfo);
+                    } catch (error) {
+                        // Silently fail - user can try again
+                        console.error('Failed to copy editor URL:', error);
+                    }
+                },
             );
             registry.registerFileDropdownMenuAction(
                 (fileInfo: FileInfo) => isExtensionSupported(fileInfo.extension, true) && isFileAuthor(fileInfo),

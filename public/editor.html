@@ -84,6 +84,7 @@
         };
 
         var onAppReady = function () {
+            console.log("[ONLYOFFICE] onAppReady called");
             innerAlert("Document editor ready");
             const form = document.getElementsByClassName('form').item(0);
             if (form) {
@@ -95,11 +96,17 @@
                 }
                 form.classList.add('form_visible');
             }
+            console.log("[ONLYOFFICE] Editor ready, docEditor available:", !!docEditor);
+            if (docEditor) {
+                console.log("[ONLYOFFICE] docEditor methods after ready:", Object.keys(docEditor).filter(k => typeof docEditor[k] === 'function' && k.toLowerCase().includes('shar')));
+            }
         };
 
         var onRequestClose = function () {
+            console.log("[ONLYOFFICE] onRequestClose called");
             // If opened via window.open(), close the window
             if (window.opener) {
+                console.log("[ONLYOFFICE] Closing window opened via window.open()");
                 window.close();
                 return;
             }
@@ -107,6 +114,7 @@
             // If opened in a top-level window (not in iframe, not inside Mattermost)
             // Close the browser tab/window
             if (window.parent === window) {
+                console.log("[ONLYOFFICE] Closing top-level window");
                 if (docEditor) {
                     docEditor.destroyEditor();
                 }
@@ -115,6 +123,7 @@
             }
             
             // If opened in iframe (inside Mattermost), send event to parent
+            console.log("[ONLYOFFICE] Sending close event to parent (iframe mode)");
             window.parent.dispatchEvent(ONLYOFFICE_CLOSE_EVENT);
             if (docEditor) {
                 docEditor.destroyEditor();
@@ -138,15 +147,22 @@
         }
 
         var onError = function (event) {
-            if (event) innerAlert(event.data);
+            console.error("[ONLYOFFICE] onError called:", event);
+            if (event) {
+                console.error("[ONLYOFFICE] Error data:", event.data);
+                innerAlert(event.data);
+            }
         };
 
         var onOutdatedVersion = function (event) {
+            console.warn("[ONLYOFFICE] onOutdatedVersion called:", event);
             // Check if we're in a top-level window (not in iframe)
             if (window.parent === window) {
+                console.log("[ONLYOFFICE] Closing window due to outdated version (top-level)");
                 window.dispatchEvent(ONLYOFFICE_CLOSE_EVENT);
                 window.close();
             } else {
+                console.log("[ONLYOFFICE] Sending close event due to outdated version (iframe)");
                 window.parent.dispatchEvent(ONLYOFFICE_CLOSE_EVENT);
             }
         };
@@ -160,9 +176,21 @@
 
         var config = {{ .config }};
         
+        console.log("[ONLYOFFICE] Config loaded:", config);
+        console.log("[ONLYOFFICE] Document info:", config.document ? config.document.info : "no document");
+        console.log("[ONLYOFFICE] Sharing settings:", config.document && config.document.info ? config.document.info.sharingSettings : "no sharing settings");
+        console.log("[ONLYOFFICE] Editor config mode:", config.editorConfig ? config.editorConfig.mode : "no mode");
+        console.log("[ONLYOFFICE] Customization features:", config.editorConfig && config.editorConfig.customization ? config.editorConfig.customization.features : "no features");
+        
         // Add onRequestSharingSettings handler after config is defined
         // This handler is required for the sharing button to appear in the editor
         events["onRequestSharingSettings"] = function () {
+            console.log("[ONLYOFFICE] onRequestSharingSettings called");
+            console.log("[ONLYOFFICE] docEditor exists:", !!docEditor);
+            console.log("[ONLYOFFICE] config exists:", !!config);
+            console.log("[ONLYOFFICE] document exists:", !!(config && config.document));
+            console.log("[ONLYOFFICE] document.info exists:", !!(config && config.document && config.document.info));
+            
             // Get sharing settings from document config
             // This is called when user clicks the sharing button
             if (docEditor && config && config.document && config.document.info) {
@@ -170,20 +198,34 @@
                 if (config.document.info.sharingSettings && Array.isArray(config.document.info.sharingSettings)) {
                     sharingSettings = config.document.info.sharingSettings;
                 }
+                console.log("[ONLYOFFICE] Sharing settings to set:", sharingSettings);
+                console.log("[ONLYOFFICE] docEditor.setSharingSettings exists:", typeof docEditor.setSharingSettings === 'function');
+                
                 // Return current sharing settings to show the sharing dialog
                 try {
-                    docEditor.setSharingSettings({
-                        sharingSettings: sharingSettings
-                    });
+                    if (typeof docEditor.setSharingSettings === 'function') {
+                        docEditor.setSharingSettings({
+                            sharingSettings: sharingSettings
+                        });
+                        console.log("[ONLYOFFICE] setSharingSettings called successfully");
+                    } else {
+                        console.error("[ONLYOFFICE] setSharingSettings is not a function");
+                        innerAlert("Error: setSharingSettings is not available");
+                    }
                 } catch (error) {
+                    console.error("[ONLYOFFICE] Error setting sharing settings:", error);
                     innerAlert("Error setting sharing settings: " + error.message);
                 }
+            } else {
+                console.warn("[ONLYOFFICE] Cannot set sharing settings - missing required objects");
+                console.warn("[ONLYOFFICE] docEditor:", !!docEditor, "config:", !!config, "document:", !!(config && config.document), "info:", !!(config && config.document && config.document.info));
             }
         };
         
         // Add handler for sharing settings changes
         // This is called when user modifies sharing settings in the editor
         events["onSharingSettingsChanged"] = function (event) {
+            console.log("[ONLYOFFICE] onSharingSettingsChanged called with event:", event);
             // In Mattermost, sharing is managed through the permissions modal
             // We log the changes but actual updates should go through Mattermost UI
             // The sharing dialog in ONLYOFFICE will show current settings but
@@ -192,29 +234,51 @@
         };
         
         config["events"] = events;
+        console.log("[ONLYOFFICE] Events configured:", Object.keys(events));
 
         var connectEditor = function () {
+            console.log("[ONLYOFFICE] connectEditor called");
+            console.log("[ONLYOFFICE] DocsAPI available:", typeof DocsAPI !== 'undefined');
+            console.log("[ONLYOFFICE] Config before editor creation:", config);
+            
             try {
                 docEditor = new DocsAPI.DocEditor("iframeEditor", config);
+                console.log("[ONLYOFFICE] DocEditor created successfully:", !!docEditor);
+                console.log("[ONLYOFFICE] DocEditor methods:", docEditor ? Object.keys(docEditor).filter(k => typeof docEditor[k] === 'function') : "no methods");
                 fixSize();
                 
                 // Ensure sharing settings are set after editor is initialized
                 // This is a fallback in case onRequestSharingSettings wasn't called
                 if (config && config.document && config.document.info && config.document.info.sharingSettings) {
+                    console.log("[ONLYOFFICE] Setting up fallback sharing settings");
                     setTimeout(function() {
-                        if (docEditor && docEditor.setSharingSettings) {
-                            try {
-                                docEditor.setSharingSettings({
-                                    sharingSettings: config.document.info.sharingSettings
-                                });
-                            } catch (error) {
-                                innerAlert("Error setting sharing settings on init: " + error.message);
+                        console.log("[ONLYOFFICE] Fallback timeout executed");
+                        if (docEditor) {
+                            console.log("[ONLYOFFICE] docEditor exists in fallback:", !!docEditor);
+                            console.log("[ONLYOFFICE] setSharingSettings exists:", typeof docEditor.setSharingSettings === 'function');
+                            if (docEditor.setSharingSettings) {
+                                try {
+                                    docEditor.setSharingSettings({
+                                        sharingSettings: config.document.info.sharingSettings
+                                    });
+                                    console.log("[ONLYOFFICE] Fallback setSharingSettings called successfully");
+                                } catch (error) {
+                                    console.error("[ONLYOFFICE] Error in fallback setSharingSettings:", error);
+                                    innerAlert("Error setting sharing settings on init: " + error.message);
+                                }
+                            } else {
+                                console.warn("[ONLYOFFICE] setSharingSettings not available in fallback");
                             }
+                        } else {
+                            console.warn("[ONLYOFFICE] docEditor not available in fallback");
                         }
                     }, 1000);
+                } else {
+                    console.log("[ONLYOFFICE] No sharing settings in config for fallback");
                 }
-            } catch {
-                innerAlert('[ONLYOFFICE Error]: could not initialize DocsAPI instance');
+            } catch (error) {
+                console.error("[ONLYOFFICE] Error creating DocEditor:", error);
+                innerAlert('[ONLYOFFICE Error]: could not initialize DocsAPI instance: ' + error.message);
                 // Check if we're in a top-level window (not in iframe)
                 if (window.parent === window) {
                     window.dispatchEvent(ONLYOFFICE_ERROR_EVENT);
